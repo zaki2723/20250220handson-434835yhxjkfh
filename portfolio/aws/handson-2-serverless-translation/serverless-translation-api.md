@@ -476,3 +476,109 @@ MOCKは、API Gatewayの統合タイプの1つで、バックエンドサービ�
 4. **バージョン管理**
    - 複数のステージを利用することで、APIの異なるバージョンを同時に運用できます。
 
+
+# APIGATEWAYとLambdaを組み合わせる
+
+<img width="1000" src="img/50.png">
+
+/直下にリソースを作成する
+
+<img width="1000" src="img/51.png">
+
+リソース名にtranslateと入力し、リソースを作成
+
+<img width="1000" src="img/52.png">
+
+メソッドを作成を押下
+
+<img width="1000" src="img/53.png">
+
+- メソッドタイプはGETを選択し、統合タイプはLambda関数を選択。また、Lambdaプロキシ統合のチェックを入れる  
+- Lambda関数は前回作成した、translate-functionを選択し、メソッドを作成する
+
+<img width="1000" src="img/54.png">
+
+メソッドリクエストの設定→編集を押下
+
+<img width="1000" src="img/55.png">
+
+URLクエリ文字列パラメータより、名前に`input_text`と入力し、必須にチェックを入れて保存する
+
+<img width="1000" src="img/56.png">
+
+Lambda関数の編集画面に移り、以下のコードを追加する
+
+```
+        'isBase64Encoded': False,
+        'headers': {}
+```
+
+全体
+
+```
+import json
+import boto3
+
+translate = boto3.client(service_name='translate')
+
+def lambda_handler(event, context):
+
+    input_text = event['queryStringParameters']['input_text']
+
+    response = translate.translate_text(
+        Text=input_text,
+        SourceLanguageCode="ja",
+        TargetLanguageCode="en"
+    )
+
+    output_text = response.get('TranslatedText')
+
+    return {
+        'statusCode': 200,
+        'body': json.dumps({
+            'output_text': output_text
+        }),
+        'isBase64Encoded': False,
+        'headers': {}
+    }
+```
+
+<img width="1000" src="img/57.png">
+
+テストイベントより、新しいイベントを作成  
+イベント名はapicallと入力  
+テンプレートｰオプションより、APIと検索し、apigateway-aws-proxyを選択  
+
+<img width="1000" src="img/58.png">
+
+ `"queryStringParameters": `の出力を`input_text:"こんにちは"`に変更
+
+<img width="800" src="img/59.png">
+
+<img width="800" src="img/60.png">
+
+Lambda関数の、input_textの出力を`input_text = event['queryStringParameters']['input_text']`に変更
+
+<img width="500" src="img/61.png">
+
+<img width="500" src="img/62.png">
+
+Lambda関数をデプロイし、テスト実行してみる
+
+<img width="1200" src="img/63.png">
+
+/translateより、APIをデプロイ
+
+<img width="1200" src="img/64.png">
+
+ステージはdevを選択
+
+<img width="800" src="img/65.png">
+
+URLを呼び出すより、URLをコピーして移動する
+
+<img width="1200" src="img/66.png">
+
+URL末尾にクエリ文字列パラメータを追加する必要があるため、`?input_text=こんばんは`と入力し、適切に動作するか確認する
+
+<img width="1200" src="img/67.png">
